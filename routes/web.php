@@ -1,5 +1,9 @@
 <?php
 
-use App\Http\Controllers\BackgroundJobController;
+use Illuminate\Support\Facades\Route;
+use App\Jobs\SampleJob;
 
-Route::post('/run-job', [BackgroundJobController::class, 'runJob']);
+Route::get('/test-job', function () {
+    runBackgroundJob(\App\Jobs\SampleJob::class, 'performTask', ['Hello, World!']);
+    return 'Background job initiated!';
+});

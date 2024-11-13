@@ -1,26 +1,35 @@
 <?php
 
-use App\Jobs\BackgroundJobRunner;
+use Illuminate\Support\Facades\Log;
 
-function runBackgroundJob($class, $method, $params = [], $priority = 0)
-{
-    $allowedClasses = config('background_jobs.allowed_classes');
-    if (!in_array($class, $allowedClasses)) {
-        throw new Exception("Class not allowed for background job execution.");
-    }
+if (!function_exists('runBackgroundJob')) {
+    function runBackgroundJob($class, $method, $params)
+    {
+        try {
+            // Log job start
+            Log::info('Starting background job', [
+                'class' => $class,
+                'method' => $method,
+                'params' => $params
+            ]);
 
-    $jobData = [
-        'class' => $class,
-        'method' => $method,
-        'params' => $params,
-        'priority' => $priority,
-    ];
+            // Your job execution code
+            $job = new $class();
+            call_user_func_array([$job, $method], $params);
 
-    $command = 'php ' . base_path('artisan') . " job:execute '" . json_encode($jobData) . "'";
-
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        pclose(popen("start /B " . $command, "r"));
-    } else {
-        exec($command . " > /dev/null &");
+            // Log job completion
+            Log::info('Background job completed successfully', [
+                'class' => $class,
+                'method' => $method
+            ]);
+        } catch (\Exception $e) {
+            // Log job failure in background_jobs_errors log
+            Log::channel('background_jobs_errors')->error('Background job failed', [
+                'class' => $class,
+                'method' => $method,
+                'error' => $e->getMessage(),
+                'stacktrace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }
